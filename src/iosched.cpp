@@ -14,11 +14,12 @@ double avg_turnaround = 0, avg_waittime = 0;
 
 #define stime_t int
 typedef struct ioreq_t {
-    stime_t arrival_time;
+    int req_num;
     int track;
+    stime_t arrival_time;
     stime_t start_time;
     stime_t end_time;
-    ioreq_t(): arrival_time(0), track(0), start_time(0), end_time(0){}
+    ioreq_t(): req_num(0),arrival_time(0), track(0), start_time(0), end_time(0){}
 } ioreq_t;
 vector<ioreq_t*> io_requests;
 deque<ioreq_t*> pending_ioreq;
@@ -96,7 +97,7 @@ void parse_input(string input_file){
     } 
 
     // parse instructions
-    int ts = 0, trk = 0;
+    int ts = 0, trk = 0, req_num = 0;
     ioreq_t* req;
     string line = "";
     while(in){
@@ -109,6 +110,8 @@ void parse_input(string input_file){
         req = new ioreq_t();
         req->arrival_time = ts;
         req->track = trk;
+        req->req_num = req_num;
+        req_num++;
         io_requests.push_back(req);
         if(testing) printf("%d %d\n", ts, trk);
     }
@@ -130,18 +133,22 @@ void simulation(){
     stime_t sim_time = 0;
     int track = 0;
     int next_ioreq_num = 0;
+    int num_processed_req = 0;
     ioreq_t* cur_ioreq = nullptr;
     
-    while(next_ioreq_num < io_requests.size()){
-        if(io_requests[next_ioreq_num]->arrival_time == sim_time){
+    while(num_processed_req <= io_requests.size()){
+        if(next_ioreq_num < io_requests.size() && io_requests[next_ioreq_num]->arrival_time == sim_time){
             pending_ioreq.push_back(io_requests[next_ioreq_num]);
+            if(opt_v) printf("%d: %d add %d\n", sim_time, io_requests[next_ioreq_num]->req_num, io_requests[next_ioreq_num]->track);
             next_ioreq_num++;
         }
 
         if(cur_ioreq != nullptr){  // io is active
             if(track == cur_ioreq->track){  // completed at this time
                 cur_ioreq->end_time = sim_time;
+                if(opt_v) printf("%d: %d finish %d\n", sim_time, cur_ioreq->req_num, (cur_ioreq->end_time - cur_ioreq->arrival_time));
                 cur_ioreq = nullptr;
+                num_processed_req++;
             } else {   // not yet complete 
                 if(track < cur_ioreq->track) track++;
                 else track--;
@@ -150,9 +157,9 @@ void simulation(){
             if(!pending_ioreq.empty()){   // req pending, fetch next req & start io
                 cur_ioreq = get_next_req();
                 cur_ioreq->start_time = sim_time;
+                if(opt_v) printf("%d: %d issue %d %d\n", sim_time, cur_ioreq->req_num, cur_ioreq->track, track);
             }
         }
-        
         sim_time++;
     }
 }
