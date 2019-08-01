@@ -121,7 +121,7 @@ void parse_input(string input_file){
 
 }
 
-ioreq_t* get_next_req(){
+ioreq_t* get_next_req(){    // FIFO
     ioreq_t* req;
     if(pending_ioreq.empty()) return nullptr;
     req = pending_ioreq.front();
@@ -136,32 +136,44 @@ void simulation(){
     int num_processed_req = 0;
     ioreq_t* cur_ioreq = nullptr;
     
-    while(num_processed_req <= io_requests.size()){
+    while(num_processed_req < io_requests.size()){
         if(next_ioreq_num < io_requests.size() && io_requests[next_ioreq_num]->arrival_time == sim_time){
             pending_ioreq.push_back(io_requests[next_ioreq_num]);
-            if(opt_v) printf("%d: %d add %d\n", sim_time, io_requests[next_ioreq_num]->req_num, io_requests[next_ioreq_num]->track);
+            if(opt_v) printf("%d:     %d add %d\n", sim_time, io_requests[next_ioreq_num]->req_num, io_requests[next_ioreq_num]->track);
             next_ioreq_num++;
         }
 
-        if(cur_ioreq != nullptr){  // io is active
-            if(track == cur_ioreq->track){  // completed at this time
-                cur_ioreq->end_time = sim_time;
-                if(opt_v) printf("%d: %d finish %d\n", sim_time, cur_ioreq->req_num, (cur_ioreq->end_time - cur_ioreq->arrival_time));
-                cur_ioreq = nullptr;
-                num_processed_req++;
-            } else {   // not yet complete 
-                if(track < cur_ioreq->track) track++;
-                else track--;
-            }
-        } else {    // no IO req active
+        if(cur_ioreq != nullptr && track == cur_ioreq->track){  // io is active & completed at this time
+            cur_ioreq->end_time = sim_time;
+            int wait_time = cur_ioreq->start_time - cur_ioreq->arrival_time;
+            int turnaround_time = cur_ioreq->end_time - cur_ioreq->arrival_time;
+            avg_waittime += wait_time;
+            avg_turnaround += turnaround_time;
+            if(wait_time > max_waittime) max_waittime = wait_time;
+            if(opt_v) printf("%d:     %d finish %d\n", sim_time, cur_ioreq->req_num, (cur_ioreq->end_time - cur_ioreq->arrival_time));
+            cur_ioreq = nullptr;
+            num_processed_req++;
+        } 
+        
+        if(cur_ioreq == nullptr) {    // no IO req active
             if(!pending_ioreq.empty()){   // req pending, fetch next req & start io
                 cur_ioreq = get_next_req();
                 cur_ioreq->start_time = sim_time;
-                if(opt_v) printf("%d: %d issue %d %d\n", sim_time, cur_ioreq->req_num, cur_ioreq->track, track);
+                if(opt_v) printf("%d:     %d issue %d %d\n", sim_time, cur_ioreq->req_num, cur_ioreq->track, track);
             }
         }
+
+        if(cur_ioreq != nullptr && track != cur_ioreq->track) {   // io is active & not yet completed
+            if(track < cur_ioreq->track) track++;
+            else track--;
+            tot_movement++;
+        }
+
         sim_time++;
     }
+    total_time = sim_time - 1;
+    avg_waittime = avg_waittime / io_requests.size();
+    avg_turnaround = avg_turnaround / io_requests.size();
 }
 
 void print_result(){
