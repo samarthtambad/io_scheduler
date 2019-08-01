@@ -16,11 +16,11 @@ typedef struct ioreq_t {
 int track = 0;
 std::vector<ioreq_t*> io_requests;
 std::deque<ioreq_t*> pending_ioreq;
+bool opt_v = false, opt_q = false, opt_f = false;
 
 #include "IOSchedulers.h"
 
 bool testing = false;
-bool opt_v = false, opt_q = false, opt_f = false;
 double avg_turnaround = 0, avg_waittime = 0;
 stime_t total_time = 0, tot_movement = 0, max_waittime = 0;
 
