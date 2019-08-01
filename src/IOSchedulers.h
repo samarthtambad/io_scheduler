@@ -9,6 +9,7 @@ class IOScheduler
         virtual bool is_request_pending() = 0;
 };
 IOScheduler::IOScheduler(){}
+IOScheduler::~IOScheduler(){}
 
 
 
@@ -24,6 +25,7 @@ class FIFO : public IOScheduler
         bool is_request_pending();
 };
 FIFO::FIFO(){}
+FIFO::~FIFO(){}
 void FIFO::add_request(ioreq_t* r){
     pending_ioreq.push_back(r);
 }
@@ -54,6 +56,7 @@ void SSTF::add_request(ioreq_t* r){
     pending_ioreq.push_back(r);
 }
 SSTF::SSTF(){}
+SSTF::~SSTF(){}
 ioreq_t* SSTF::get_next_req(){
     ioreq_t* req;
     int min_seek = 10000;
@@ -93,6 +96,7 @@ class LOOK : public IOScheduler
 LOOK::LOOK(){
     dir = 1;    // 1 up, 0 down
 }
+LOOK::~LOOK(){}
 void LOOK::add_request(ioreq_t* r){
     pending_ioreq.push_back(r);
 }
@@ -178,6 +182,7 @@ class CLOOK : public IOScheduler
         bool is_request_pending();
 };
 CLOOK::CLOOK(){}
+CLOOK::~CLOOK(){}
 void CLOOK::add_request(ioreq_t* r){
     pending_ioreq.push_back(r);
 }
@@ -248,6 +253,7 @@ FLOOK::FLOOK(){
     Q = 0;
     AQ = 1;
 }
+FLOOK::~FLOOK(){}
 void FLOOK::add_request(ioreq_t* r){
     ADDQ.push_back(r);
     if(opt_q){
