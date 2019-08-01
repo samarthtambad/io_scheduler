@@ -13,6 +13,7 @@ typedef struct ioreq_t {
     stime_t end_time;
     ioreq_t(): req_num(0),arrival_time(0), track(0), start_time(0), end_time(0){}
 } ioreq_t;
+int track = 0;
 std::vector<ioreq_t*> io_requests;
 std::deque<ioreq_t*> pending_ioreq;
 
@@ -23,7 +24,7 @@ bool opt_v = false, opt_q = false, opt_f = false;
 double avg_turnaround = 0, avg_waittime = 0;
 stime_t total_time = 0, tot_movement = 0, max_waittime = 0;
 
-IOScheduler *io_scheduler = (IOScheduler *) new FIFO();
+IOScheduler* io_scheduler;
 
 
 void parse_args(int argc, char *argv[], std::string &input_file){
@@ -37,19 +38,19 @@ void parse_args(int argc, char *argv[], std::string &input_file){
                 if(testing) printf("algo %c\n", algo);
                 switch(algo){
                     case 'i':   // FIFO
-
+                        io_scheduler = (IOScheduler *) new FIFO();
                         break;
                     case 'j':   // SSTF
-
+                        io_scheduler = (IOScheduler *) new SSTF();
                         break;
                     case 's':   // LOOK
-
+                        io_scheduler = (IOScheduler *) new LOOK();
                         break;
                     case 'c':   // CLOOK
-
+                        io_scheduler = (IOScheduler *) new CLOOK();
                         break;
                     case 'f':   // FLOOK
-
+                        io_scheduler = (IOScheduler *) new FLOOK();
                         break;
                     default:
                         break;
@@ -122,17 +123,8 @@ void parse_input(std::string input_file){
     in.close();
 }
 
-ioreq_t* get_next_req(){    // FIFO
-    ioreq_t* req;
-    if(pending_ioreq.empty()) return nullptr;
-    req = pending_ioreq.front();
-    pending_ioreq.pop_front();
-    return req;
-}
-
 void simulation(){
     stime_t sim_time = 0;
-    int track = 0;
     int next_ioreq_num = 0;
     int num_processed_req = 0;
     ioreq_t* cur_ioreq = nullptr;
@@ -161,6 +153,8 @@ void simulation(){
                 cur_ioreq = io_scheduler->get_next_req();
                 cur_ioreq->start_time = sim_time;
                 if(opt_v) printf("%d:     %d issue %d %d\n", sim_time, cur_ioreq->req_num, cur_ioreq->track, track);
+            } else {
+                sim_time++;
             }
         }
 
@@ -168,9 +162,9 @@ void simulation(){
             if(track < cur_ioreq->track) track++;
             else track--;
             tot_movement++;
+            sim_time++;
         }
-
-        sim_time++;
+        
     }
     total_time = sim_time - 1;
     avg_waittime = avg_waittime / io_requests.size();
