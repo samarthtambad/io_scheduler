@@ -15,7 +15,6 @@ typedef struct ioreq_t {
 } ioreq_t;
 int track = 0;
 std::vector<ioreq_t*> io_requests;
-std::deque<ioreq_t*> pending_ioreq;
 bool opt_v = false, opt_q = false, opt_f = false;
 
 #include "IOSchedulers.h"
@@ -131,7 +130,7 @@ void simulation(){
     
     while(num_processed_req < io_requests.size()){
         if(next_ioreq_num < io_requests.size() && io_requests[next_ioreq_num]->arrival_time == sim_time){
-            pending_ioreq.push_back(io_requests[next_ioreq_num]);
+            io_scheduler->add_request(io_requests[next_ioreq_num]);
             if(opt_v) printf("%d:     %d add %d\n", sim_time, io_requests[next_ioreq_num]->req_num, io_requests[next_ioreq_num]->track);
             next_ioreq_num++;
         }
@@ -148,8 +147,8 @@ void simulation(){
             num_processed_req++;
         } 
         
-        if(cur_ioreq == nullptr) {    // no IO req active
-            if(!pending_ioreq.empty()){   // req pending, fetch next req & start io
+        if(cur_ioreq == nullptr){    // no IO req active
+            if(io_scheduler->is_request_pending()){   // req pending, fetch next req & start io
                 cur_ioreq = io_scheduler->get_next_req();
                 cur_ioreq->start_time = sim_time;
                 if(opt_v) printf("%d:     %d issue %d %d\n", sim_time, cur_ioreq->req_num, cur_ioreq->track, track);
