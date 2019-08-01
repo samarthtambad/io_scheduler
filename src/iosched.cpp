@@ -14,6 +14,7 @@ typedef struct ioreq_t {
     ioreq_t(): req_num(0),arrival_time(0), track(0), start_time(0), end_time(0){}
 } ioreq_t;
 int track = 0;
+stime_t sim_time = 0;
 std::vector<ioreq_t*> io_requests;
 bool opt_v = false, opt_q = false, opt_f = false;
 
@@ -123,7 +124,6 @@ void parse_input(std::string input_file){
 }
 
 void simulation(){
-    stime_t sim_time = 0;
     int next_ioreq_num = 0;
     int num_processed_req = 0;
     ioreq_t* cur_ioreq = nullptr;

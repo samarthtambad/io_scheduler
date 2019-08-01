@@ -11,6 +11,7 @@ class IOScheduler
 IOScheduler::IOScheduler(){}
 
 
+
 class FIFO : public IOScheduler
 {
     private:
@@ -35,6 +36,7 @@ ioreq_t* FIFO::get_next_req(){
 bool FIFO::is_request_pending(){
     return !pending_ioreq.empty();
 }
+
 
 
 class SSTF : public IOScheduler
@@ -72,6 +74,7 @@ ioreq_t* SSTF::get_next_req(){
 bool SSTF::is_request_pending(){
     return !pending_ioreq.empty();
 }
+
 
 
 // like SCAN but doesn't go all the way to the end
@@ -162,6 +165,7 @@ bool LOOK::is_request_pending(){
 }
 
 
+
 class CLOOK : public IOScheduler
 {
     private:
@@ -222,7 +226,8 @@ bool CLOOK::is_request_pending(){
     return !pending_ioreq.empty();
 }
 
-std::vector<int> abc(2);
+
+
 class FLOOK : public IOScheduler
 {
     private:
@@ -245,6 +250,13 @@ FLOOK::FLOOK(){
 }
 void FLOOK::add_request(ioreq_t* r){
     ADDQ.push_back(r);
+    if(opt_q){
+        printf("   Q=%d ( ", Q);
+        for (std::deque<ioreq_t*>::iterator it = ADDQ.begin(); it!=ADDQ.end(); ++it){
+            printf("%d:%d ", (*it)->req_num, (*it)->track);
+        }
+        printf(")\n");
+    }
 }
 ioreq_t* FLOOK::get_next_req(){
     
@@ -252,20 +264,7 @@ ioreq_t* FLOOK::get_next_req(){
     int closest_seek = 10000;
     std::deque<ioreq_t*>::iterator closest_seek_idx;
 
-    if(opt_f){
-        printf("AQ=%d dir=%d curtrack=%d:  Q[0] = ( ", AQ, dir?-1:1, track);
-        for (std::deque<ioreq_t*>::iterator it = ADDQ.begin(); it!=ADDQ.end(); ++it){
-            printf("%d:%d:%d ", (*it)->req_num, (*it)->track, ((*it)->track - track));
-        }
-        printf(")  Q[1] = ( ");
-        for (std::deque<ioreq_t*>::iterator it = ACTVQ.begin(); it!=ACTVQ.end(); ++it){
-            printf("%d:%d:%d ", (*it)->req_num, (*it)->track, ((*it)->track - track));
-        }
-        printf(")\n");
-    }
-
-    if(ACTVQ.empty()){
-        // printf("active queue is empty, exchange");
+    if(ACTVQ.empty()){  // active queue is empty, exchange
         if(Q == 0) Q = 1;
         else Q = 0;
 
@@ -276,7 +275,31 @@ ioreq_t* FLOOK::get_next_req(){
         temp = ACTVQ;
         ACTVQ = ADDQ;
         ADDQ = temp;
+    }
 
+    if(opt_q){
+        if(Q == 0){
+            printf("AQ=%d dir=%d curtrack=%d:  Q[0] = ( ", AQ, dir?1:-1, track);
+            for (std::deque<ioreq_t*>::iterator it = ADDQ.begin(); it!=ADDQ.end(); ++it){
+                printf("%d:%d:%d ", (*it)->req_num, (*it)->track, ((*it)->track - track));
+            }
+            printf(")  Q[1] = ( ");
+            for (std::deque<ioreq_t*>::iterator it = ACTVQ.begin(); it!=ACTVQ.end(); ++it){
+                printf("%d:%d:%d ", (*it)->req_num, (*it)->track, ((*it)->track - track));
+            }
+            printf(") \n");
+        } else {
+            printf("AQ=%d dir=%d curtrack=%d:  Q[0] = ( ", AQ, dir?1:-1, track);
+            for (std::deque<ioreq_t*>::iterator it = ACTVQ.begin(); it!=ACTVQ.end(); ++it){
+                printf("%d:%d:%d ", (*it)->req_num, (*it)->track, ((*it)->track - track));
+            }
+            printf(")  Q[1] = ( ");
+            for (std::deque<ioreq_t*>::iterator it = ADDQ.begin(); it!=ADDQ.end(); ++it){
+                printf("%d:%d:%d ", (*it)->req_num, (*it)->track, ((*it)->track - track));
+            }
+            printf(") \n");
+        }
+        
     }
 
     if(opt_q) printf("\tGet: (");
@@ -284,7 +307,7 @@ ioreq_t* FLOOK::get_next_req(){
         int seek_time = abs(track - (*it)->track);
         if(dir){    // up
             if(track <= (*it)->track){
-                if(opt_q) printf("%d:%d ", (*it)->req_num, seek_time);
+                if(opt_q) printf("%d:%d:%d ", (*it)->req_num, (*it)->track, seek_time);
                 if(seek_time < closest_seek){
                     closest_seek = seek_time;
                     closest_seek_idx = it;
@@ -293,7 +316,7 @@ ioreq_t* FLOOK::get_next_req(){
             }
         } else {    // down
             if(track >= (*it)->track){
-                if(opt_q) printf("%d:%d ", (*it)->req_num, seek_time);
+                if(opt_q) printf("%d:%d:%d ", (*it)->req_num, (*it)->track, seek_time);
                 if(seek_time < closest_seek){
                     closest_seek = seek_time;
                     closest_seek_idx = it;
@@ -314,7 +337,7 @@ ioreq_t* FLOOK::get_next_req(){
             int seek_time = abs(track - (*it)->track);
             if(dir){    // up
                 if(track <= (*it)->track){
-                    if(opt_q) printf("%d:%d ", (*it)->req_num, seek_time);
+                    if(opt_q) printf("%d:%d:%d ", (*it)->req_num, (*it)->track, seek_time);
                     if(seek_time < closest_seek){
                         closest_seek = seek_time;
                         closest_seek_idx = it;
@@ -323,7 +346,7 @@ ioreq_t* FLOOK::get_next_req(){
                 }
             } else {    // down
                 if(track >= (*it)->track){
-                    if(opt_q) printf("%d:%d ", (*it)->req_num, seek_time);
+                    if(opt_q) printf("%d:%d:%d ", (*it)->req_num, (*it)->track, seek_time);
                     if(seek_time < closest_seek){
                         closest_seek = seek_time;
                         closest_seek_idx = it;
@@ -334,6 +357,7 @@ ioreq_t* FLOOK::get_next_req(){
         }
     }
     if(opt_q) printf(") --> %d dir=%d\n", req->req_num, dir?1:-1);
+    if(opt_f) printf("%d:       %d get Q=%d\n", sim_time, req->req_num, AQ);
 
     ACTVQ.erase(closest_seek_idx);
     return req;
