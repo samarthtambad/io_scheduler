@@ -142,10 +142,46 @@ class CLOOK : public IOScheduler
 };
 CLOOK::CLOOK(){}
 ioreq_t* CLOOK::get_next_req(){
-    ioreq_t* req;
-    if(pending_ioreq.empty()) return nullptr;
-    req = pending_ioreq.front();
-    pending_ioreq.pop_front();
+    ioreq_t* req = nullptr;
+    int closest_seek = 10000;
+    int trk = track;
+    std::deque<ioreq_t*>::iterator closest_seek_idx;
+
+    if(opt_q) printf("\tGet: (");
+    for (std::deque<ioreq_t*>::iterator it = pending_ioreq.begin(); it!=pending_ioreq.end(); ++it){
+        int seek_time = abs(trk - (*it)->track);
+        if(trk <= (*it)->track){  // up direction only
+            if(opt_q) printf("%d:%d ", (*it)->req_num, seek_time);
+            if(seek_time < closest_seek){
+                closest_seek = seek_time;
+                closest_seek_idx = it;
+                req = *it;
+            }
+        }
+    }
+    if(req != nullptr){
+        if(opt_q) printf(") --> %d\n", req->req_num);
+    }
+    if(req == nullptr){
+        trk = 0;
+        closest_seek = 10000;
+
+        // if(opt_q) printf("\tGet: (");
+        for (std::deque<ioreq_t*>::iterator it = pending_ioreq.begin(); it!=pending_ioreq.end(); ++it){
+            int seek_time = abs(trk - (*it)->track);
+            if(trk <= (*it)->track){
+                // if(opt_q) printf("%d:%d ", (*it)->req_num, seek_time);
+                if(seek_time < closest_seek){
+                    closest_seek = seek_time;
+                    closest_seek_idx = it;
+                    req = *it;
+                }
+            }
+        }
+        if(opt_q) printf(") --> go to bottom and pick %d\n", req->req_num);
+    }
+
+    pending_ioreq.erase(closest_seek_idx);
     return req;
 }
 
